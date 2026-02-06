@@ -1,15 +1,20 @@
-export type SourceType = "CRM" | "Transcript" | "Email" | "Notes" | "Other";
-
 export interface TextChunk {
   id: string;
-  source: SourceType;
+  label: string;
+  text: string;
+}
+
+export interface UploadedFile {
+  id: string;
+  name: string;
+  label: string;
   text: string;
 }
 
 export interface Snippet {
   text: string;
-  source_label: string;
-  chunk_number: number;
+  context_label: string;
+  snippet_number: number;
 }
 
 export type Confidence = "High" | "Med" | "Low";
