@@ -1,0 +1,4 @@
+project_id = "wjtpkmvglzbossdgflml"
+
+[functions.call-prep]
+verify_jwt = false
