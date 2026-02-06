@@ -1,54 +1,44 @@
 
 
-# Call Prep Brief — Implementation Plan
+# Redesign Call Prep Brief — Input Overhaul
 
-## Overview
-A single-page AI-powered tool that turns messy customer notes into a structured, scannable brief a salesperson can review in 60–90 seconds before a call.
+## What Changes
 
----
+The current app uses source-type dropdowns and multiple text chunks. The new design replaces this with two simpler input methods side by side:
 
-## 1. Input Section (Top of Page)
-- **App header** with title "Call Prep Brief" and a brief tagline
-- **Paste box** — large textarea for raw text input
-- **Source labeling** — dropdown per chunk (CRM, Transcript, Email, Notes, Other), with an "Add another chunk" button to paste multiple sources separately
-- **File upload** — optional `.txt` / `.md` file upload that populates a new chunk
-- **"Generate Call Prep" button** — primary action, triggers AI processing
-- **"Clear" button** — resets all inputs and results
+### Option A — Single Paste Area
+- One large textarea for pasting all context at once
+- A small optional free-text field above it: "Context label (optional)" (e.g., "CRM notes + last call transcript")
 
-## 2. AI Processing (Lovable Cloud + Lovable AI)
-- An edge function receives the labeled text chunks and calls the Lovable AI gateway (Gemini Flash) with a structured prompt
-- Uses **tool calling** to extract structured output: an array of theme cards with summaries, confidence levels, and source-attributed snippets
-- Streams results back for a responsive feel
+### Option B — Drag-and-Drop File Upload
+- A drag-and-drop zone accepting multiple `.txt` and `.md` files
+- Each uploaded file appears in a list showing:
+  - File name
+  - Free-text "Context label" field
+  - Remove (X) button
 
-## 3. Theme Cards Output (Below Input)
-Results displayed as expandable cards, one per theme from this fixed list (plus "Other"):
-- Pain Points
-- Problems
-- Objections
-- Goals / Priorities
-- Open Questions
-- Risks / Blockers
-- Next Steps
+### Backend / AI Changes
+- Update the `TextChunk` type: replace the fixed `SourceType` enum with a free-text `label` string
+- Update the edge function's system prompt and tool schema to use `context_label` (free text) instead of `source_label` (enum)
+- Snippet attribution in results will show the user's context label (or file name as fallback) instead of "CRM #1"
 
-**Each card shows:**
-- Theme name + confidence badge (High / Med / Low with color coding)
-- 1–2 sentence summary
-- Expandable details with 3–6 supporting snippets, each labeled with source type and chunk number (e.g., "Transcript #2")
-- Cards with no relevant content are hidden
+### Results Section
+- Minor update: snippet badges show the free-text context label instead of the old source type
+- Copy brief output updated to use context labels
 
-## 4. Utility Features
-- **"Copy Brief"** button — copies all theme summaries and key bullets to clipboard in a clean text format
-- **Loading state** with skeleton cards while AI processes
-- **Error handling** for AI rate limits (429/402) with user-friendly messages
+## Files Modified
 
-## 5. Design & UX
-- Clean, minimal single-page layout — no navigation, no sidebar
-- Light professional theme with clear visual hierarchy
-- Accordion-style expandable cards for quick scanning
-- Fully responsive (usable on laptop during a call)
-- Output tone: bullets, concise, actionable — enforced via the AI system prompt
+1. **`src/types/call-prep.ts`** — Remove `SourceType` enum, change `TextChunk.source` to `TextChunk.label` (optional string), update `Snippet.source_label` to `context_label`
+2. **`src/hooks/use-call-prep.ts`** — Rewrite to manage a single paste input + a list of uploaded files (with labels), send both to the edge function
+3. **`src/components/InputSection.tsx`** — Full redesign: single paste area with optional label field, drag-and-drop zone with file list, generate/clear buttons
+4. **`src/components/ResultsSection.tsx`** — Update snippet display to show `context_label` instead of `source_label #chunk_number`
+5. **`src/pages/Index.tsx`** — Update props to match new hook interface
+6. **`supabase/functions/call-prep/index.ts`** — Update tool schema and prompt to use `context_label` (free text) instead of fixed source types
 
-## 6. Backend Setup
-- Enable Lovable Cloud
-- One edge function (`call-prep`) that handles the AI call with a carefully crafted system prompt enforcing the theme structure, snippet attribution, and concise tone
+## Technical Details
+
+- Drag-and-drop uses native HTML5 `onDragOver`/`onDrop` events (no extra library needed)
+- Files read via `FileReader.readAsText()` — same as current approach but supporting multiple files
+- The edge function receives an array of `{ label: string, text: string }` objects (paste content becomes one item, each file becomes one item)
+- The AI tool schema's `source_label` field changes from an enum to a free-text string with description guidance
 
