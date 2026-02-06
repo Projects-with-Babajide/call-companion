@@ -4,13 +4,16 @@ import { ResultsSection } from "@/components/ResultsSection";
 
 const Index = () => {
   const {
-    chunks,
+    pasteLabel,
+    setPasteLabel,
+    pasteText,
+    setPasteText,
+    files,
+    addFiles,
+    removeFile,
+    updateFileLabel,
     result,
     isLoading,
-    addChunk,
-    removeChunk,
-    updateChunk,
-    handleFileUpload,
     generate,
     clear,
     copyBrief,
@@ -24,17 +27,20 @@ const Index = () => {
             Call Prep Brief
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Paste customer context, generate a scannable brief in seconds.
+            Paste customer context or drop files, generate a scannable brief in seconds.
           </p>
         </header>
 
         <InputSection
-          chunks={chunks}
+          pasteLabel={pasteLabel}
+          onPasteLabelChange={setPasteLabel}
+          pasteText={pasteText}
+          onPasteTextChange={setPasteText}
+          files={files}
+          onAddFiles={addFiles}
+          onRemoveFile={removeFile}
+          onUpdateFileLabel={updateFileLabel}
           isLoading={isLoading}
-          onAddChunk={addChunk}
-          onRemoveChunk={removeChunk}
-          onUpdateChunk={updateChunk}
-          onFileUpload={handleFileUpload}
           onGenerate={generate}
           onClear={clear}
         />

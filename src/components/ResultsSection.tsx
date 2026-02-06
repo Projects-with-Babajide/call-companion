@@ -73,7 +73,7 @@ export function ResultsSection({ result, isLoading, onCopy }: ResultsSectionProp
                 {theme.snippets.map((snippet, idx) => (
                   <li key={idx} className="text-sm flex gap-2 items-start">
                     <span className="shrink-0 text-xs font-medium bg-muted text-muted-foreground rounded px-1.5 py-0.5 mt-0.5">
-                      {snippet.source_label} #{snippet.chunk_number}
+                      {snippet.context_label}
                     </span>
                     <span className="text-foreground">{snippet.text}</span>
                   </li>

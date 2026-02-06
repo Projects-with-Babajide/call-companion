@@ -1,48 +1,56 @@
 import { useState, useCallback } from "react";
-import type { TextChunk, CallPrepResult, SourceType } from "@/types/call-prep";
+import type { UploadedFile, CallPrepResult } from "@/types/call-prep";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
-let chunkIdCounter = 0;
-
-export function createChunk(source: SourceType = "Notes", text = ""): TextChunk {
-  return { id: String(++chunkIdCounter), source, text };
-}
+let fileIdCounter = 0;
 
 export function useCallPrep() {
-  const [chunks, setChunks] = useState<TextChunk[]>([createChunk()]);
+  const [pasteLabel, setPasteLabel] = useState("");
+  const [pasteText, setPasteText] = useState("");
+  const [files, setFiles] = useState<UploadedFile[]>([]);
   const [result, setResult] = useState<CallPrepResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const addChunk = useCallback(() => {
-    setChunks((prev) => [...prev, createChunk()]);
+  const addFiles = useCallback((newFiles: File[]) => {
+    newFiles.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target?.result as string;
+        if (text) {
+          setFiles((prev) => [
+            ...prev,
+            { id: String(++fileIdCounter), name: file.name, label: "", text },
+          ]);
+        }
+      };
+      reader.readAsText(file);
+    });
   }, []);
 
-  const removeChunk = useCallback((id: string) => {
-    setChunks((prev) => (prev.length <= 1 ? prev : prev.filter((c) => c.id !== id)));
+  const removeFile = useCallback((id: string) => {
+    setFiles((prev) => prev.filter((f) => f.id !== id));
   }, []);
 
-  const updateChunk = useCallback((id: string, updates: Partial<TextChunk>) => {
-    setChunks((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, ...updates } : c))
-    );
-  }, []);
-
-  const handleFileUpload = useCallback((file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
-      if (text) {
-        setChunks((prev) => [...prev, createChunk("Other", text)]);
-      }
-    };
-    reader.readAsText(file);
+  const updateFileLabel = useCallback((id: string, label: string) => {
+    setFiles((prev) => prev.map((f) => (f.id === id ? { ...f, label } : f)));
   }, []);
 
   const generate = useCallback(async () => {
-    const nonEmpty = chunks.filter((c) => c.text.trim());
-    if (nonEmpty.length === 0) {
-      toast({ title: "No input", description: "Paste some text before generating.", variant: "destructive" });
+    const chunks: { label: string; text: string }[] = [];
+
+    if (pasteText.trim()) {
+      chunks.push({ label: pasteLabel.trim() || "Pasted context", text: pasteText.trim() });
+    }
+
+    files.forEach((f) => {
+      if (f.text.trim()) {
+        chunks.push({ label: f.label.trim() || f.name, text: f.text.trim() });
+      }
+    });
+
+    if (chunks.length === 0) {
+      toast({ title: "No input", description: "Paste some text or upload files before generating.", variant: "destructive" });
       return;
     }
 
@@ -51,7 +59,7 @@ export function useCallPrep() {
 
     try {
       const { data, error } = await supabase.functions.invoke("call-prep", {
-        body: { chunks: nonEmpty.map((c) => ({ source: c.source, text: c.text })) },
+        body: { chunks },
       });
 
       if (error) {
@@ -72,11 +80,12 @@ export function useCallPrep() {
     } finally {
       setIsLoading(false);
     }
-  }, [chunks]);
+  }, [pasteText, pasteLabel, files]);
 
   const clear = useCallback(() => {
-    chunkIdCounter = 0;
-    setChunks([createChunk()]);
+    setPasteLabel("");
+    setPasteText("");
+    setFiles([]);
     setResult(null);
   }, []);
 
@@ -84,7 +93,9 @@ export function useCallPrep() {
     if (!result) return;
     const text = result.themes
       .map((t) => {
-        const bullets = t.snippets.map((s) => `  • ${s.text} [${s.source_label} #${s.chunk_number}]`).join("\n");
+        const bullets = t.snippets
+          .map((s) => `  • ${s.text} [${s.context_label}, Snippet ${s.snippet_number}]`)
+          .join("\n");
         return `## ${t.theme} (${t.confidence})\n${t.summary}\n${bullets}`;
       })
       .join("\n\n");
@@ -93,13 +104,16 @@ export function useCallPrep() {
   }, [result]);
 
   return {
-    chunks,
+    pasteLabel,
+    setPasteLabel,
+    pasteText,
+    setPasteText,
+    files,
+    addFiles,
+    removeFile,
+    updateFileLabel,
     result,
     isLoading,
-    addChunk,
-    removeChunk,
-    updateChunk,
-    handleFileUpload,
     generate,
     clear,
     copyBrief,

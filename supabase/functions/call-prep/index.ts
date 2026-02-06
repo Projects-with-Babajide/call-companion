@@ -12,7 +12,7 @@ Analyze ALL provided text chunks carefully. For each theme, find supporting evid
 
 Be concise and actionable. Use bullet points. Avoid long paragraphs. Write as if the salesperson will glance at this while walking to the meeting room.
 
-For each snippet, preserve the original source label and chunk number exactly as provided (e.g., "CRM #1", "Transcript #2").`;
+For each snippet, use the context_label provided by the user (e.g., "CRM notes", "Call transcript 2026-02-01"). Preserve labels exactly as given.`;
 
 const TOOL_DEFINITION = {
   type: "function" as const,
@@ -62,20 +62,20 @@ const TOOL_DEFINITION = {
                       description:
                         "A short quote or excerpt from the source material supporting this theme.",
                     },
-                    source_label: {
+                    context_label: {
                       type: "string",
                       description:
-                        'The source type label, e.g. "CRM", "Transcript", "Email", "Notes", "Other".',
+                        "The context label provided by the user for this chunk, e.g. 'CRM notes', 'Call transcript 2026-02-01'. Use the label exactly as given.",
                     },
-                    chunk_number: {
+                    snippet_number: {
                       type: "number",
-                      description: "The chunk number (1-indexed) this snippet came from.",
+                      description: "Sequential snippet number within this theme (1-indexed).",
                     },
                   },
-                  required: ["text", "source_label", "chunk_number"],
+                  required: ["text", "context_label", "snippet_number"],
                   additionalProperties: false,
                 },
-                description: "3-6 supporting snippets with source attribution.",
+                description: "3-6 supporting snippets with context label attribution.",
               },
             },
             required: ["theme", "summary", "confidence", "snippets"],
@@ -116,8 +116,8 @@ serve(async (req) => {
     // Build user prompt from chunks
     const userPrompt = chunks
       .map(
-        (c: { source: string; text: string }, i: number) =>
-          `--- ${c.source} #${i + 1} ---\n${c.text}`
+        (c: { label: string; text: string }, i: number) =>
+          `--- ${c.label} (chunk ${i + 1}) ---\n${c.text}`
       )
       .join("\n\n");
 
