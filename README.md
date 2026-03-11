@@ -1,4 +1,6 @@
-# Welcome to your Lovable project
+# Call Prep Brief
+
+🔗 **Live App**: [https://id-preview--28994388-bce7-432d-b7a6-29c4fd8be6ba.lovable.app](https://id-preview--28994388-bce7-432d-b7a6-29c4fd8be6ba.lovable.app)
 
 ## Project info
 
